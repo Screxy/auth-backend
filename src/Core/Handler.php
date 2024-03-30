@@ -6,18 +6,21 @@ namespace Core;
 
 class Handler
 {
+    public array $callback;
+
     public function __construct(
         private readonly string $method,
         private readonly string $path,
-        private string          $callback
+        private readonly string $controller,
+        private readonly string $action
     )
     {
-        $this->callback = $callback;
+        $this->callback = [$this->controller, $this->action];
     }
 
-    public static function create(string $method, string $path, string $callback): self
+    public static function create(string $method, string $path, string $controller, string $action): self
     {
-        return new self ($method, $path, $callback);
+        return new self ($method, $path, $controller, $action);
     }
 
     /**
@@ -37,9 +40,9 @@ class Handler
     }
 
     /**
-     * @return string
+     * @return array
      */
-    public function getCallback(): string
+    public function getCallback(): array
     {
         return $this->callback;
     }

@@ -9,26 +9,29 @@ use App\Helpers\ArrayValidator;
 use App\Models\User;
 use Core\Logger;
 use Core\NotFoundResponse;
+use Core\Request;
 use Core\Response;
 use DomainException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Firebase\JWT\SignatureInvalidException;
 use InvalidArgumentException;
 use ZxcvbnPhp\Zxcvbn;
 
 class UserController
 {
-    public static function authorize(array $requestData): Response
+    public static function authorize(Request $request): Response
     {
         try {
-            ArrayValidator::validateKeysOnEmpty(['email', 'password'], $requestData);
+            $body = $request->getBody();
+            ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
 
-            $user = User::getByEmail($requestData['email']);
+            $user = User::getByEmail($body['email']);
             if ($user === null) {
                 return NotFoundResponse::create();
             }
 
-            $isValid = password_verify($requestData['password'], $user->getPassword());
+            $isValid = password_verify($body['password'], $user->getPassword());
 
             if (!$isValid) {
                 return new Response(401, ['message' => 'unauthorized']);
@@ -49,23 +52,25 @@ class UserController
         }
     }
 
-    public static function register(array $requestData): Response
+    public static function register(Request $request): Response
     {
         try {
-            ArrayValidator::validateKeysOnEmpty(['email', 'password'], $requestData);
+            $body = $request->getBody();
+
+            ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
 
 
-            if (User::getByEmail($requestData['email'])) {
+            if (User::getByEmail($body['email'])) {
                 return new Response(409, ['message' => 'User already exist']);
             }
 
             $userData = [
-                $requestData['email'],
+                $body['email'],
             ];
 
             $zxcvbn = new Zxcvbn();
 
-            $weak = $zxcvbn->passwordStrength($requestData['password'], $userData);
+            $weak = $zxcvbn->passwordStrength($body['password'], $userData);
             $passwordCheckStatus = match ($weak['score']) {
                 2 => PasswordStrength::GOOD,
                 3, 4 => PasswordStrength::PERFECT,
@@ -73,12 +78,12 @@ class UserController
             };
 
             if ($passwordCheckStatus === PasswordStrength::BAD) {
-                return new Response(403, ['message'=>'weak password']);
+                return new Response(403, ['message' => 'weak password']);
             }
 
             $user = new User();
-            $user->setEmail($requestData['email']);
-            $user->setPassword($requestData['password']);
+            $user->setEmail($body['email']);
+            $user->setPassword($body['password']);
             $user->save();
 
             $response = [
@@ -95,19 +100,27 @@ class UserController
         }
     }
 
-    public static function feed(array $requestData): Response
+    public static function feed(Request $request): Response
     {
         try {
-            ArrayValidator::validateKeysOnEmpty(['access_token'], $requestData);
+            $authorizationHeader = $request->getHeaders()['Authorization'] ?? '';
+            $accessToken = str_replace('Bearer ', '', $authorizationHeader);
+
             $key = (string)getenv('APP_KEY');
-            JWT::decode($requestData['access_token'], new Key($key, 'HS256'));
+
+            JWT::decode($accessToken, new Key($key, 'HS256'));
+
             return new Response(200);
-        } catch (InvalidArgumentException $exception) {
-            Logger::error($exception->getTrace());
-            return new Response(400, ['message' => $exception->getMessage()]);
-        } catch (DomainException $exception) {
+        } catch (DomainException|SignatureInvalidException|InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
             return new Response(401, ['message' => 'unauthorized']);
         }
+    }
+
+    public static function test(Request $request): void
+    {
+        $authorizationHeader = $request->getHeaders()['Authorization'] ?? '';
+        $accessToken = str_replace('Bearer', '', $authorizationHeader);
+        var_dump($accessToken);
     }
 }

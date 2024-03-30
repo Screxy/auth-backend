@@ -6,40 +6,26 @@ namespace Core;
 
 class Router
 {
-    private const string METHOD_GET = 'GET';
-    private const string METHOD_POST = 'POST';
-    private const string METHOD_PATCH = 'PATCH';
-    private const string METHOD_DELETE = 'DELETE';
     private array $handlers;
     /**
      * @var callable
      */
     private $notFoundHandler;
 
-    public function get(string $path, string $handler): void
+    public function get(string $path, array $method): void
     {
-        $this->handlers[] = Handler::create(self::METHOD_GET, $path, $handler);
+        $this->handlers[] = Handler::create(Request::METHOD_GET, $path, $method[0], $method[1]);
     }
 
-    public function post(string $path, string $handler): void
+    public function post(string $path, array $method): void
     {
-        $this->handlers[] = Handler::create(self::METHOD_POST, $path, $handler);
+        $this->handlers[] = Handler::create(Request::METHOD_POST, $path, $method[0], $method[1]);
     }
 
-    public function patch(string $path, string $handler): void
+    public function run(Request $request): void
     {
-        $this->handlers[] = Handler::create(self::METHOD_PATCH, $path, $handler);
-    }
-
-    public function delete(string $path, string $handler): void
-    {
-        $this->handlers[] = Handler::create(self::METHOD_DELETE, $path, $handler);
-    }
-
-    public function run(string $method, string $path): void
-    {
-        $requestUri = parse_url($path);
-        $requestPath = $requestUri['path'];
+        $requestPath = $request->getPath();
+        $method = $request->getMethod();
         $callback = null;
         $params = [];
 
@@ -61,21 +47,17 @@ class Router
         }
 
         if (is_string($callback)) {
-            $parts = explode('::', $callback);
-            $class = $parts[0];
+            $class = $callback[0];
             $handler = new $class;
 
-            $method = $parts[1];
+            $method = $callback[1];
             $callback = [$handler, $method];
         }
 
-        if ($_SERVER['REQUEST_METHOD'] !== self::METHOD_GET) {
-            $body = file_get_contents('php://input');
-            $params[] = json_decode($body, true);
-        }
+        $params[] = $request->getBody();
 
         /** @var Response $response */
-        $response = call_user_func_array($callback, $params);
+        $response = call_user_func_array($callback, [$request]);
         echo $response;
     }
 

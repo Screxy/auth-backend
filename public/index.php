@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 use App\Controllers\UserController;
 use Core\Logger;
+use Core\Request;
 use Core\Response;
 use Core\Router;
 
@@ -29,16 +30,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $router = new Router();
-$router->post('/feed', UserController::class . '::feed');
-$router->post('/authorize', UserController::class . '::authorize');
-$router->post('/register', UserController::class . '::register');
 
+$router->get('/feed', [UserController::class, 'feed']);
+$router->get('/', [UserController::class, 'test']);
+$router->post('/authorize', [UserController::class, 'authorize']);
+$router->post('/register', [UserController::class, 'register']);
+
+$request = new Request($_SERVER);
 
 $router->addNotFoundHandler(function () {
     echo new Response(404, ['message' => 'Not found']);
 });
+
 try {
-    $router->run($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+    $router->run($request);
 } catch (\Throwable $exception) {
     http_response_code(500);
     echo 'Internal Server Error';
