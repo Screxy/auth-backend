@@ -19,9 +19,7 @@ services:
         networks:
           - internal
     php:
-        build:
-          context: ./config/php
-          dockerfile: Dockerfile
+        image: auth-backend-php:dev
         container_name: php
         volumes:
           - ./:/var/www

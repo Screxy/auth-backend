@@ -37,7 +37,6 @@ $logger->pushHandler($stream_handler);
 $router = new Router();
 
 $router->get('/feed', [UserController::class, 'feed']);
-$router->get('/', [UserController::class, 'test']);
 $router->post('/authorize', [UserController::class, 'authorize']);
 $router->post('/register', [UserController::class, 'register']);
 
