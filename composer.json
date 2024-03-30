@@ -1,0 +1,13 @@
+{
+    "name": "vkontakte/auth-backend",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/App"
+        }
+    },
+    "require": {
+        "ext-mysqli": "*",
+        "php": "^8.3"
+    }
+}
