@@ -46,18 +46,16 @@ class Router
             $callback = $this->notFoundHandler;
         }
 
-        if (is_string($callback)) {
+        if (is_array($callback)) {
             $class = $callback[0];
             $handler = new $class;
-
             $method = $callback[1];
             $callback = [$handler, $method];
         }
 
-        $params[] = $request->getBody();
-
         /** @var Response $response */
         $response = call_user_func_array($callback, [$request]);
+
         echo $response;
     }
 

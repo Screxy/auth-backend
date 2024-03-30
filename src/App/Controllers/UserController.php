@@ -12,6 +12,7 @@ use Core\NotFoundResponse;
 use Core\Request;
 use Core\Response;
 use DomainException;
+use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
@@ -20,7 +21,7 @@ use ZxcvbnPhp\Zxcvbn;
 
 class UserController
 {
-    public static function authorize(Request $request): Response
+    public function authorize(Request $request): Response
     {
         try {
             $body = $request->getBody();
@@ -40,6 +41,7 @@ class UserController
 
             $payload = [
                 'user_id' => $user->getId(),
+                'exp' => time() + 86400,
             ];
 
             $jwt = JWT::encode($payload, $key, 'HS256');
@@ -52,7 +54,7 @@ class UserController
         }
     }
 
-    public static function register(Request $request): Response
+    public function register(Request $request): Response
     {
         try {
             $body = $request->getBody();
@@ -100,7 +102,7 @@ class UserController
         }
     }
 
-    public static function feed(Request $request): Response
+    public function feed(Request $request): Response
     {
         try {
             $authorizationHeader = $request->getHeaders()['Authorization'] ?? '';
@@ -108,16 +110,19 @@ class UserController
 
             $key = (string)getenv('APP_KEY');
 
-            JWT::decode($accessToken, new Key($key, 'HS256'));
+            $payload = (array)JWT::decode($accessToken, new Key($key, 'HS256'));
 
             return new Response(200);
+        } catch (ExpiredException $exception) {
+            Logger::error($exception->getTrace());
+            return new Response(401, ['message' => $exception->getMessage()]);
         } catch (DomainException|SignatureInvalidException|InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
-            return new Response(401, ['message' => 'unauthorized']);
+            return new Response(401, ['message' => 'Wrong token']);
         }
     }
 
-    public static function test(Request $request): void
+    public function test(Request $request): void
     {
         $authorizationHeader = $request->getHeaders()['Authorization'] ?? '';
         $accessToken = str_replace('Bearer', '', $authorizationHeader);
