@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Enum\PasswordStrength;
 use App\Helpers\ArrayValidator;
 use App\Models\User;
 use Core\Logger;
@@ -13,27 +14,24 @@ use DomainException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use InvalidArgumentException;
+use ZxcvbnPhp\Zxcvbn;
 
 class UserController
 {
-    public static function authorize(array $requestData): void
+    public static function authorize(array $requestData): Response
     {
         try {
             ArrayValidator::validateKeysOnEmpty(['email', 'password'], $requestData);
 
             $user = User::getByEmail($requestData['email']);
             if ($user === null) {
-                echo NotFoundResponse::create();
-
-                return;
+                return NotFoundResponse::create();
             }
 
             $isValid = password_verify($requestData['password'], $user->getPassword());
 
             if (!$isValid) {
-                echo new Response(401, ['message' => 'unauthorized']);
-
-                return;
+                return new Response(401, ['message' => 'unauthorized']);
             }
             $key = (string)getenv('APP_KEY');
 
@@ -43,50 +41,73 @@ class UserController
 
             $jwt = JWT::encode($payload, $key, 'HS256');
 
-            echo new Response(200, ['access_token' => $jwt]);
+            return new Response(200, ['access_token' => $jwt]);
 
         } catch (InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
-            echo new Response(400, ['message' => $exception->getMessage()]);
+            return new Response(400, ['message' => $exception->getMessage()]);
         }
     }
 
-    public static function register(array $requestData): void
+    public static function register(array $requestData): Response
     {
         try {
             ArrayValidator::validateKeysOnEmpty(['email', 'password'], $requestData);
 
 
             if (User::getByEmail($requestData['email'])) {
-                echo new Response(409, ['message' => 'User already exist']);
+                return new Response(409, ['message' => 'User already exist']);
+            }
 
-                return;
+            $userData = [
+                $requestData['email'],
+            ];
+
+            $zxcvbn = new Zxcvbn();
+
+            $weak = $zxcvbn->passwordStrength($requestData['password'], $userData);
+            $passwordCheckStatus = match ($weak['score']) {
+                2 => PasswordStrength::GOOD,
+                3, 4 => PasswordStrength::PERFECT,
+                default => PasswordStrength::BAD,
+            };
+
+            if ($passwordCheckStatus === PasswordStrength::BAD) {
+                return new Response(403, ['message'=>'weak password']);
             }
 
             $user = new User();
             $user->setEmail($requestData['email']);
             $user->setPassword($requestData['password']);
             $user->save();
+
+            $response = [
+                'user_id' => $user->getId(),
+                'password' => $passwordCheckStatus,
+            ];
+
+            return new Response(200, $response);
+
         } catch (InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
-            echo new Response(400);
-        }
 
+            return new Response(400);
+        }
     }
 
-    public static function feed(array $requestData): void
+    public static function feed(array $requestData): Response
     {
         try {
             ArrayValidator::validateKeysOnEmpty(['access_token'], $requestData);
             $key = (string)getenv('APP_KEY');
             JWT::decode($requestData['access_token'], new Key($key, 'HS256'));
-            echo new Response(200);
+            return new Response(200);
         } catch (InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
-            echo new Response(400, ['message' => $exception->getMessage()]);
+            return new Response(400, ['message' => $exception->getMessage()]);
         } catch (DomainException $exception) {
             Logger::error($exception->getTrace());
-            echo new Response(401, ['message' => 'unauthorized']);
+            return new Response(401, ['message' => 'unauthorized']);
         }
     }
 }

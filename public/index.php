@@ -37,10 +37,10 @@ $router->post('/register', UserController::class . '::register');
 $router->addNotFoundHandler(function () {
     echo new Response(404, ['message' => 'Not found']);
 });
-//try {
+try {
     $router->run($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-//} catch (\Throwable $exception) {
-//    http_response_code(500);
-//    echo 'Internal Server Error';
-//    Logger::error([$exception->getMessage(), $exception->getLine(), $exception->getTrace()]);
-//}
+} catch (\Throwable $exception) {
+    http_response_code(500);
+    echo 'Internal Server Error';
+    Logger::error([$exception->getMessage(), $exception->getLine(), $exception->getTrace()]);
+}

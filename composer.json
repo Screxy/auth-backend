@@ -11,6 +11,7 @@
         "ext-mysqli": "*",
         "php": "^8.3",
         "ext-pdo": "*",
-        "firebase/php-jwt": "^6.10"
+        "firebase/php-jwt": "^6.10",
+        "bjeavons/zxcvbn-php": "^1.3"
     }
 }

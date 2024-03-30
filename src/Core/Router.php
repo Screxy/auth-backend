@@ -74,7 +74,9 @@ class Router
             $params[] = json_decode($body, true);
         }
 
-        call_user_func_array($callback, $params);
+        /** @var Response $response */
+        $response = call_user_func_array($callback, $params);
+        echo $response;
     }
 
     private function preparePathPattern(string $path): string
