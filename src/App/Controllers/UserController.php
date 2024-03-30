@@ -9,7 +9,9 @@ use App\Models\User;
 use Core\Logger;
 use Core\NotFoundResponse;
 use Core\Response;
+use DomainException;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use InvalidArgumentException;
 
 class UserController
@@ -33,10 +35,12 @@ class UserController
 
                 return;
             }
-            $key = 'auth-key';
+            $key = (string)getenv('APP_KEY');
+
             $payload = [
                 'user_id' => $user->getId(),
             ];
+
             $jwt = JWT::encode($payload, $key, 'HS256');
 
             echo new Response(200, ['access_token' => $jwt]);
@@ -52,13 +56,20 @@ class UserController
         try {
             ArrayValidator::validateKeysOnEmpty(['email', 'password'], $requestData);
 
+
+            if (User::getByEmail($requestData['email'])) {
+                echo new Response(409, ['message' => 'User already exist']);
+
+                return;
+            }
+
             $user = new User();
             $user->setEmail($requestData['email']);
             $user->setPassword($requestData['password']);
             $user->save();
         } catch (InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
-            echo new Response(400, ['message' => $exception->getMessage()]);
+            echo new Response(400);
         }
 
     }
@@ -67,9 +78,15 @@ class UserController
     {
         try {
             ArrayValidator::validateKeysOnEmpty(['access_token'], $requestData);
+            $key = (string)getenv('APP_KEY');
+            JWT::decode($requestData['access_token'], new Key($key, 'HS256'));
+            echo new Response(200);
         } catch (InvalidArgumentException $exception) {
             Logger::error($exception->getTrace());
             echo new Response(400, ['message' => $exception->getMessage()]);
+        } catch (DomainException $exception) {
+            Logger::error($exception->getTrace());
+            echo new Response(401, ['message' => 'unauthorized']);
         }
     }
 }

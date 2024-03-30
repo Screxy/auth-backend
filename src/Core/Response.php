@@ -6,7 +6,7 @@ namespace Core;
 
 readonly class Response
 {
-    public function __construct(private int $statusCode, private ?array $data)
+    public function __construct(private int $statusCode, private ?array $data = [])
     {
     }
 
@@ -14,6 +14,6 @@ readonly class Response
     {
         http_response_code($this->statusCode);
         header('Content-Type: application/json');
-        return json_encode($this->data);
+        return $this->data ? json_encode($this->data) : '';
     }
 }
