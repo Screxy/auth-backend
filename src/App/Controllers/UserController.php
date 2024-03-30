@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use InvalidArgumentException;
-use App\Core\NotFoundResponse;
-use App\Core\Response;
-use App\Helpers\ArrayValidator;
 use App\Models\User;
+use Core\NotFoundResponse;
+use Core\Response;
 
 class UserController
 {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 
 use App\Controllers\UserController;
-use App\Core\Logger;
-use App\Core\Response;
-use App\Core\Router;
+use Core\Logger;
+use Core\Response;
+use Core\Router;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 

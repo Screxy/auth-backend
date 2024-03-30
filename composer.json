@@ -3,7 +3,8 @@
     "type": "project",
     "autoload": {
         "psr-4": {
-            "App\\": "src/App"
+            "App\\": "src/App",
+            "Core\\": "src/Core"
         }
     },
     "require": {
