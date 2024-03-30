@@ -10,7 +10,7 @@ class User extends ActiveRecordEntity
 {
     protected string $email;
     protected string $password;
-    protected string $accessToken;
+    protected ?string $accessToken = null;
 
     protected static function getTableName(): string
     {
@@ -27,14 +27,14 @@ class User extends ActiveRecordEntity
         $this->email = $email;
     }
 
+    public function setPassword(string $password): void
+    {
+        $this->password = password_hash($password, PASSWORD_DEFAULT);
+    }
+
     public function getPassword(): string
     {
         return $this->password;
-    }
-
-    public function setPassword(string $password): void
-    {
-        $this->password = $password;
     }
 
     public function getAccessToken(): string

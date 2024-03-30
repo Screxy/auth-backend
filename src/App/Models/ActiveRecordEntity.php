@@ -94,10 +94,6 @@ abstract class ActiveRecordEntity
         $this->id = $db->getLastInsertId();
     }
 
-
-    /**
-     * @return static[]|null
-     */
     public static function findAll(): ?array
     {
         $db = Db::getInstance();
@@ -109,6 +105,13 @@ abstract class ActiveRecordEntity
     {
         $db = Db::getInstance();
         $entities = $db->query('SELECT * FROM `' . static::getTableName() . '` WHERE `id`=:id', [':id' => $id], static::class);
+        return $entities ? $entities[0] : null;
+    }
+
+    public static function getByEmail(string $email): ?static
+    {
+        $db = Db::getInstance();
+        $entities = $db->query('SELECT * FROM `' . static::getTableName() . '` WHERE `email`=:email', [':email' => $email], static::class);
         return $entities ? $entities[0] : null;
     }
 

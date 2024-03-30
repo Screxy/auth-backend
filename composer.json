@@ -10,6 +10,7 @@
     "require": {
         "ext-mysqli": "*",
         "php": "^8.3",
-        "ext-pdo": "*"
+        "ext-pdo": "*",
+        "firebase/php-jwt": "^6.10"
     }
 }
