@@ -31,7 +31,6 @@ readonly class UserController
     {
         try {
             $body = $request->getBody();
-            $this->logger->info('Get request with body', $body);
 
             ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
 

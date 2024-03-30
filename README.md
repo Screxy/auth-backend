@@ -28,6 +28,6 @@ docker-compose down
 - Host: mysql
 - Имя пользователя: root
 - Пароль: secret
-- Имя базы данных: task
+- Имя базы данных: auth
 - Порт: 3306
 При желании, данные можно поменять в файле `docker-compose.yml`.
