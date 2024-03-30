@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Controllers\ProductController;
+
+use App\Controllers\UserController;
 use App\Core\Logger;
 use App\Core\Response;
 use App\Core\Router;
 
-require '../vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 if (isset($_SERVER['HTTP_ORIGIN'])) {
     header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
@@ -28,11 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $router = new Router();
-$router->get('/product/getAll', ProductController::class . '::getAll');
-$router->get('/product/get/:id', ProductController::class . '::get');
-$router->post('/product/add', ProductController::class . '::add');
-$router->patch('/product/edit', ProductController::class . '::edit');
-$router->delete('/product/delete/:id', ProductController::class . '::delete');
+$router->get('/feed', UserController::class . '::feed');
+$router->post('/authorize', UserController::class . '::authorize');
+$router->post('/register', UserController::class . '::register');
+
 
 $router->addNotFoundHandler(function () {
     echo new Response(404, ['message' => 'Not found']);

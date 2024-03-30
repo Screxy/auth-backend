@@ -3,3 +3,4 @@ vendor/
 mysql
 logs
 .env
+public/log

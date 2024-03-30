@@ -120,7 +120,5 @@ abstract class ActiveRecordEntity
         $this->id = null;
     }
 
-    abstract public function toArray(): array;
-
     abstract protected static function getTableName(): string;
 }
