@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Controllers\UserController;
-use Core\Logger;
+use App\Controller\UserController;
+
 use Core\Request;
 use Core\Response;
 use Core\Router;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -28,6 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit(0);
 }
 
+$logger = new Logger('logger');
+$stream_handler = new StreamHandler('php://stdout');
+$logger->pushHandler($stream_handler);
+
 $router = new Router();
 
 $router->get('/feed', [UserController::class, 'feed']);
@@ -42,9 +48,9 @@ $router->addNotFoundHandler(function () {
 });
 
 try {
-    $router->run($request);
+    $router->run($request, $logger);
 } catch (\Throwable $exception) {
     http_response_code(500);
     echo 'Internal Server Error';
-    Logger::error([$exception->getMessage(), $exception->getLine(), $exception->getTrace()]);
+    $logger->critical($exception->getMessage(), $exception->getTrace());
 }

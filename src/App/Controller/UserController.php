@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Controller;
 
 use App\Enum\PasswordStrength;
-use App\Helpers\ArrayValidator;
-use App\Models\User;
-use Core\Logger;
+use App\Exception\UserAlreadyExists;
+use App\Exception\WeakPassword;
+use App\Helper\ArrayValidator;
+use App\Model\User;
 use Core\NotFoundResponse;
 use Core\Request;
 use Core\Response;
@@ -17,14 +18,21 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
 use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
 use ZxcvbnPhp\Zxcvbn;
 
-class UserController
+readonly class UserController
 {
+    public function __construct(private LoggerInterface $logger)
+    {
+    }
+
     public function authorize(Request $request): Response
     {
         try {
             $body = $request->getBody();
+            $this->logger->info('Get request with body', $body);
+
             ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
 
             $user = User::getByEmail($body['email']);
@@ -35,7 +43,7 @@ class UserController
             $isValid = password_verify($body['password'], $user->getPassword());
 
             if (!$isValid) {
-                return new Response(401, ['message' => 'unauthorized']);
+                throw new InvalidArgumentException('Wrong password', 401);
             }
             $key = (string)getenv('APP_KEY');
 
@@ -49,8 +57,8 @@ class UserController
             return new Response(200, ['access_token' => $jwt]);
 
         } catch (InvalidArgumentException $exception) {
-            Logger::error($exception->getTrace());
-            return new Response(400, ['message' => $exception->getMessage()]);
+            $this->logger->error($exception->getMessage(), $exception->getTrace());
+            return new Response($exception->getCode(), ['message' => $exception->getMessage()]);
         }
     }
 
@@ -63,7 +71,7 @@ class UserController
 
 
             if (User::getByEmail($body['email'])) {
-                return new Response(409, ['message' => 'User already exist']);
+                throw UserAlreadyExists::create();
             }
 
             $userData = [
@@ -80,7 +88,7 @@ class UserController
             };
 
             if ($passwordCheckStatus === PasswordStrength::BAD) {
-                return new Response(403, ['message' => 'weak password']);
+                throw WeakPassword::create();
             }
 
             $user = new User();
@@ -94,11 +102,10 @@ class UserController
             ];
 
             return new Response(200, $response);
+        } catch (UserAlreadyExists|WeakPassword $exception) {
+            $this->logger->error($exception->getMessage(), $exception->getTrace());
 
-        } catch (InvalidArgumentException $exception) {
-            Logger::error($exception->getTrace());
-
-            return new Response(400);
+            return new Response($exception->getCode(), ['message' => $exception->getMessage()]);
         }
     }
 
@@ -114,18 +121,11 @@ class UserController
 
             return new Response(200);
         } catch (ExpiredException $exception) {
-            Logger::error($exception->getTrace());
+            $this->logger->error($exception->getMessage(), $exception->getTrace());
             return new Response(401, ['message' => $exception->getMessage()]);
         } catch (DomainException|SignatureInvalidException|InvalidArgumentException $exception) {
-            Logger::error($exception->getTrace());
+            $this->logger->error($exception->getMessage(), $exception->getTrace());
             return new Response(401, ['message' => 'Wrong token']);
         }
-    }
-
-    public function test(Request $request): void
-    {
-        $authorizationHeader = $request->getHeaders()['Authorization'] ?? '';
-        $accessToken = str_replace('Bearer', '', $authorizationHeader);
-        var_dump($accessToken);
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Core;
 
+use Psr\Log\LoggerInterface;
+
 class Router
 {
     private array $handlers;
@@ -22,8 +24,9 @@ class Router
         $this->handlers[] = Handler::create(Request::METHOD_POST, $path, $method[0], $method[1]);
     }
 
-    public function run(Request $request): void
+    public function run(Request $request, LoggerInterface $logger): void
     {
+
         $requestPath = $request->getPath();
         $method = $request->getMethod();
         $callback = null;
@@ -48,7 +51,7 @@ class Router
 
         if (is_array($callback)) {
             $class = $callback[0];
-            $handler = new $class;
+            $handler = new $class($logger);
             $method = $callback[1];
             $callback = [$handler, $method];
         }
