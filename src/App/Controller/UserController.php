@@ -32,11 +32,11 @@ readonly class UserController
         try {
             $body = $request->getBody();
 
-            ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
+            $this->validateBody($body);
 
-            $user = User::getByEmail($body['email']);
+            $user = User::where('email', '=', $body['email']);
             if ($user === null) {
-                return NotFoundResponse::create();
+                throw new InvalidArgumentException('User not found', 404);
             }
 
             $isValid = password_verify($body['password'], $user->getPassword());
@@ -53,10 +53,14 @@ readonly class UserController
 
             $jwt = JWT::encode($payload, $key, 'HS256');
 
+            $user->setAccessToken($jwt);
+            $user->save();
+
             return new Response(200, ['access_token' => $jwt]);
 
         } catch (InvalidArgumentException $exception) {
             $this->logger->error($exception->getMessage(), $exception->getTrace());
+
             return new Response($exception->getCode(), ['message' => $exception->getMessage()]);
         }
     }
@@ -66,10 +70,9 @@ readonly class UserController
         try {
             $body = $request->getBody();
 
-            ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
+            $this->validateBody($body);
 
-
-            if (User::getByEmail($body['email'])) {
+            if (User::where('email', '=', $body['email'])) {
                 throw UserAlreadyExists::create();
             }
 
@@ -100,8 +103,8 @@ readonly class UserController
                 'password' => $passwordCheckStatus,
             ];
 
-            return new Response(200, $response);
-        } catch (UserAlreadyExists|WeakPassword $exception) {
+            return new Response(201, $response);
+        } catch (UserAlreadyExists|WeakPassword|InvalidArgumentException $exception) {
             $this->logger->error($exception->getMessage(), $exception->getTrace());
 
             return new Response($exception->getCode(), ['message' => $exception->getMessage()]);
@@ -118,13 +121,39 @@ readonly class UserController
 
             $payload = (array)JWT::decode($accessToken, new Key($key, 'HS256'));
 
+            $user = User::getById($payload['user_id']);
+
+            if ($user->getAccessToken() !== $accessToken) {
+                throw new InvalidArgumentException('Wrong token', 401);
+            };
+
             return new Response(200);
         } catch (ExpiredException $exception) {
             $this->logger->error($exception->getMessage(), $exception->getTrace());
+
             return new Response(401, ['message' => $exception->getMessage()]);
         } catch (DomainException|SignatureInvalidException|InvalidArgumentException $exception) {
             $this->logger->error($exception->getMessage(), $exception->getTrace());
+
             return new Response(401, ['message' => 'Wrong token']);
         }
+    }
+
+    /**
+     * @param array $body
+     * @return void
+     * @throws InvalidArgumentException
+     */
+    private function validateBody(array $body): void
+    {
+        ArrayValidator::validateKeysOnEmpty(['email', 'password'], $body);
+
+        $email = (filter_var($body['email'], FILTER_VALIDATE_EMAIL)) ? $body['email'] : '';
+        $password = is_string($body['password']) ? $body['password'] : '';
+
+        if (!$email || !$password) {
+            throw new InvalidArgumentException('Invalid email or password', 400);
+        }
+
     }
 }

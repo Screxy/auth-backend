@@ -42,6 +42,7 @@ abstract class ActiveRecordEntity
             $propertyToDbFormat = $this->camelCaseToUnderscore($propertyName);
             $mappedProperties[$propertyToDbFormat] = $this->$propertyName;
         }
+
         return $mappedProperties;
     }
 
@@ -50,8 +51,9 @@ abstract class ActiveRecordEntity
         $mappedProperties = $this->mapPropertiesToDbFormat();
         if ($mappedProperties['id'] !== null) {
             $this->update($mappedProperties);
-        } else
+        } else {
             $this->insert($mappedProperties);
+        }
     }
 
     public function update(array $mappedProperties): void
@@ -105,17 +107,20 @@ abstract class ActiveRecordEntity
     {
         $db = Db::getInstance();
         $entities = $db->query('SELECT * FROM `' . static::getTableName() . '` WHERE `id`=:id', [':id' => $id], static::class);
+
         return $entities ? $entities[0] : null;
     }
 
-    public static function getByEmail(string $email): ?static
+    public static function where(string $column, string $operator, string $value): ?static
     {
         $db = Db::getInstance();
-        $entities = $db->query('SELECT * FROM `' . static::getTableName() . '` WHERE `email`=:email', [':email' => $email], static::class);
+        $sql = 'SELECT * FROM ' . static::getTableName() . ' WHERE ' . "$column $operator :$column";
+        $entities = $db->query($sql, [":$column" => $value], static::class);
+
         return $entities ? $entities[0] : null;
     }
 
-    public function destroy()
+    public function destroy(): void
     {
         $db = Db::getInstance();
         $sql = 'DELETE FROM `' . static::getTableName() . '` WHERE id=:id';

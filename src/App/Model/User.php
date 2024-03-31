@@ -39,7 +39,7 @@ class User extends ActiveRecordEntity
 
     public function getAccessToken(): string
     {
-        return $this->accessToken;
+        return (string)$this->accessToken;
     }
 
     public function setAccessToken(string $accessToken): void
